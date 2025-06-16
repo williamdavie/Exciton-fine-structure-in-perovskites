@@ -103,8 +103,9 @@ data_5_5
 # delta = 5
 
 # POST RELAXATION
-# beta = 
-# delta = 
+# beta1 (Pb1 - I - Pb2) = 5.0011
+# beta2 (Pb2 - I - Pb1) = 4.9643
+# delta = 5.172709218551347
 
 _symmetry_space_group_name_H-M    'P 1'
 _cell_length_a                    8.678129223
