@@ -275,7 +275,7 @@ _symmetry_Int_Tables_number       1
         
     
 
-        anstronglabel = r'{angtrom}'
+        anstronglabel = r'{angstrom}'
         cell_parameters = f'''CELL_PARAMETERS {anstronglabel}
  {self.celldims[0]} 0.000000 0.000000
  0.000000 {self.celldims[1]} 0.000000
