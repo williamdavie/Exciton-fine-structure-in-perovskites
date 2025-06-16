@@ -45,8 +45,8 @@ class BuildUnitCell():
         self.B = B
         self.X = X
         
-        self.beta = beta
-        self.delta = delta
+        self.beta = beta*np.pi/180
+        self.delta = delta*np.pi/180
         
         self.celldims = celldims
         
