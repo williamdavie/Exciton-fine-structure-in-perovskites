@@ -244,6 +244,7 @@ _symmetry_Int_Tables_number       1
     outdir = '/local/data/public/wd324/QEout/',
     pseudo_dir = './pseudo/',
     forc_conv_thr = 1.0d-4,
+/
     '''
 
         system = '''&system
@@ -252,9 +253,8 @@ _symmetry_Int_Tables_number       1
     ntyp = 3,
     ecutwfc = 80,
     ecutrho = 320,
-    occupations = 'smearing',
-    smearing = 'gaussian',
-    degauss = 0.005,
+    occupations = 'fixed',
+/
     '''
         
         electrons_ions = '''&electrons
