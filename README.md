@@ -10,6 +10,7 @@ University of Cambridge
 ### Contents
 
 1. [Quantum Expresso Pre-Processing](#quantum-espresso-pre-processing)
+2. [Figure Creation](#figure-creation)
 
 ## Quantum Espresso Pre-Processing
 
@@ -60,5 +61,7 @@ Given a set of structures in a CIF file quantum espresso input files can be cons
     - A gamma centred mesh **defineKmesh(self, NKx, Nky, Nkz)**
     - A set path **defineKmesh(self, highSymPoints)**
 - Bands.x
+
+## Figure Creation
 
 
