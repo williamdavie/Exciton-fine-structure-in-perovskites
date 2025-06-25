@@ -12,45 +12,41 @@ William Davie 17/04/25
 
 import numpy as np
 from typing import List
+from perovskite_2D import perovskite2D
+
+#------------------------------------------------
 
 #Input params (Example)
 
-B = 'Pb' 
-X = 'I'  
-celldims = np.array([8.977963,8.977963,16])
-beta = 0
-delta = 0 
+celldims = np.array([   8.257517092 ,  9.647622767  , 16])
+beta = 20
+delta = 15
 
+FullRel = True
 
 CsAtomStr = '''
-Cs               0.5000000000        0.0000000000        0.1608654327
-Cs               0.0000000000        0.5000000000        0.1608564732
-Cs               0.5000000000        0.0000000000       -0.1608654327
-Cs               0.0000000000        0.5000000000       -0.1608564732
+#Cs               0.5097963245        0.0437604980        0.1785136830
+#Cs               0.0097963245        0.4562395020        0.1785136830
+#Cs               0.4902036755       -0.0437604980       -0.1785136830
+#Cs              -0.0097963245        0.5437604980       -0.1785136830
 '''
 
-AtomicSpecies = ''' 
-ATOMIC_SPECIES
-  Pb 207.2 Pb.pbe-dn-kjpaw_psl.1.0.0.UPF
-  I  126.9 I.pbe-n-kjpaw_psl.1.0.0.UPF
-  Cs 132.9 Cs.pbe-spn-kjpaw_psl.1.0.0.UPF
-'''
+nbnd = 140
 
+#------------------------------------------------
 
-
-class BuildUnitCell():
+class BuildUnitCell(perovskite2D):
     
-    def __init__(self, B: str, X: str, celldims: np.ndarray, beta: float, delta: float):
+    def __init__(self,celldims: np.ndarray, beta: float, delta: float):
         
-        self.B = B
-        self.X = X
+        super().__init__(B='Pb', Bmass=207.2, X='I', Xmass='126.9') # change accordingly if working with a different structure.
         
         self.beta = beta*np.pi/180
         self.delta = delta*np.pi/180
         
         self.celldims = celldims
         
-        self.filename = f'Cs{B}{X}_{beta}_{delta}'
+        self.filename = f'./QEinputs/Cs{self.B}{self.X}_{beta}_{delta}'
         
         self.outdir = '/local/data/public/wd324/QEout/' # Change when needed
         
@@ -188,7 +184,6 @@ class BuildUnitCell():
             
                 self.CsAtomList.append(CsPos)
             
-    
             
     #------------------------------------------------
     
@@ -236,29 +231,38 @@ _symmetry_Int_Tables_number       1
                 file.write(f'Cs {self.CsAtomList[i][0]} {self.CsAtomList[i][1]} {self.CsAtomList[i][2]}\n')
             
             
-    def writeRelaxationInput(self, AtomicSpeciesStr: str) -> None:     
+    def writeRelaxationInput(self, FullRel: bool, nbnd: float=120) -> None:     
         
         control = f'''&control
     calculation = 'vc-relax',
-    prefix = '{self.B}{self.X}_{self.beta}_{self.delta}',
-    outdir = '/local/data/public/wd324/QEout/',
+    prefix = '{self.B}{self.X}_{self.beta*180/np.pi:.1f}_{self.delta*180/np.pi:.1f}',
+    outdir = '{self.outdir}',
     pseudo_dir = './pseudo/',
-    forc_conv_thr = 1.0d-4,
+    forc_conv_thr = 1.0d-1,
 /
     '''
-
-        system = '''&system
+    
+        if FullRel == True:
+            isrel = 'true'
+            RelTag = '_FR'
+        else:
+            isrel = 'false'
+            RelTag = ''
+    
+        system = f'''&system
     ibrav = 0,
     nat = 14,
     ntyp = 3,
+    nbnd = {nbnd}
     ecutwfc = 80,
+    noncolin = .{isrel}.,
+    lspinorb = .{isrel}.,
     ecutrho = 320,
     occupations = 'fixed',
 /
     '''
         
         electrons_ions = '''&electrons
-    conv_thr = 1.0d-8,
 /
 
 &ions
@@ -271,12 +275,16 @@ _symmetry_Int_Tables_number       1
 /
 '''
 
-        atomic_species = AtomicSpeciesStr
+        atomicSpecies = f'''ATOMIC_SPECIES
+  {self.B} {self.Bmass} {self.B}{RelTag}.upf   
+  {self.X} {self.Xmass} {self.X}{RelTag}.upf 
+  {self.A} 132.9 {self.Amass}{RelTag}.upf
+'''
         
     
 
         anstronglabel = r'{angstrom}'
-        cell_parameters = f'''CELL_PARAMETERS {anstronglabel}
+        cellParameters = f'''CELL_PARAMETERS {anstronglabel}
  {self.celldims[0]} 0.000000 0.000000
  0.000000 {self.celldims[1]} 0.000000
  0.000000 0.000000 {self.celldims[2]}
@@ -298,21 +306,21 @@ _symmetry_Int_Tables_number       1
             file.write('\n')
             file.write(cell)
             file.write('\n')
-            file.write(atomic_species)
+            file.write(atomicSpecies)
             file.write('\n')
-            file.write(cell_parameters)
+            file.write(cellParameters)
             file.write('\n')
             
             
             file.write('ATOMIC_POSITIONS {crystal} \n')
             for i in range(len(self.BAtomList)):
-                file.write(f'{self.B} {self.BAtomList[i][0]} {self.BAtomList[i][1]} {self.BAtomList[i][2]}\n')
+                file.write(f'{self.B} {self.BAtomList[i][0]} {self.BAtomList[i][1]} {self.BAtomList[i][2]} 0 0 0 \n')
             
             for i in range(len(self.XAtomList)):
-                file.write(f'{self.X} {self.XAtomList[i][0]} {self.XAtomList[i][1]} {self.XAtomList[i][2]}\n')
+                file.write(f'{self.X} {self.XAtomList[i][0]} {self.XAtomList[i][1]} {self.XAtomList[i][2]} 0 0 0 \n')
                 
             for i in range(len(self.CsAtomList)):
-                file.write(f'Cs {self.CsAtomList[i][0]} {self.CsAtomList[i][1]} {self.CsAtomList[i][2]}\n')
+                file.write(f'Cs {self.CsAtomList[i][0]} {self.CsAtomList[i][1]} {self.CsAtomList[i][2]} 1 1 1 \n')
             
             file.write('\n')
             file.write(Kpoints)
@@ -323,12 +331,16 @@ _symmetry_Int_Tables_number       1
         
 
 
-# Standard run. 
+# Standard run (Example)
 #------------------------------------------------
  
  
-cell = BuildUnitCell(B,X,celldims,beta,delta)
+cell = BuildUnitCell(celldims,beta,delta)
 cell.locateBXAtoms()
 cell.readCsPositions(CsAtomStr)
 cell.writeCIF()
-cell.writeRelaxationInput(AtomicSpecies)
+cell.writeRelaxationInput(FullRel,nbnd)
+
+#------------------------------------------------
+ 
+

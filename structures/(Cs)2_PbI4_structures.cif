@@ -2,7 +2,7 @@
 
 #DFT-relaxed structures Cs2 PbI4
 
-#Used QE with Pseudo Dojo NC SR v5.0 with a PBE exchange corrrelation function.
+#Used QE with Pseudo Dojo Norm-Conserving Fully Relativistic pseudo-potentials with a PBE exchange corrrelation function.
 
 #Force convergence tolerance 1e-3.
 
