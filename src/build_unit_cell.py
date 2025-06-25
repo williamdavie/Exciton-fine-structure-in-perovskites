@@ -278,7 +278,7 @@ _symmetry_Int_Tables_number       1
         atomicSpecies = f'''ATOMIC_SPECIES
   {self.B} {self.Bmass} {self.B}{RelTag}.upf   
   {self.X} {self.Xmass} {self.X}{RelTag}.upf 
-  {self.A} 132.9 {self.Amass}{RelTag}.upf
+  {self.A} {self.Amass} {self.A}{RelTag}.upf
 '''
         
     
@@ -320,7 +320,7 @@ _symmetry_Int_Tables_number       1
                 file.write(f'{self.X} {self.XAtomList[i][0]} {self.XAtomList[i][1]} {self.XAtomList[i][2]} 0 0 0 \n')
                 
             for i in range(len(self.CsAtomList)):
-                file.write(f'Cs {self.CsAtomList[i][0]} {self.CsAtomList[i][1]} {self.CsAtomList[i][2]} 1 1 1 \n')
+                file.write(f'{self.A} {self.CsAtomList[i][0]} {self.CsAtomList[i][1]} {self.CsAtomList[i][2]} 1 1 1 \n')
             
             file.write('\n')
             file.write(Kpoints)
