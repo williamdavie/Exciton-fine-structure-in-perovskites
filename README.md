@@ -40,7 +40,7 @@ $$L = \sqrt{\frac{L_0^2(1 + \tan{\beta}^2)}{(1 + \cos{\theta}^2\tan{\delta}^2)}}
 
 where $L_0 = \frac{1}{4}\sqrt{a^2 + b^2}$ (see report for detail).
 
-Once the cell is constructed it may be viewed via an output CIF file {**writeCIF(self)**} and relaxed via QE {**writeRelaxationInput(self)**}.
+Once the cell is constructed it may be viewed via an output CIF file **writeCIF(self)** and relaxed via QE **writeRelaxationInput(self)**.
 
 Relaxation details specific to our work:
 
@@ -53,14 +53,12 @@ All final structures in CIF format are given in [./Structures](https://github.co
 
 ### write_inputs.py
 
-Given a set of structures in a CIF file quantum espresso input files are constructed. 
+Given a set of structures in a CIF file quantum espresso input files can be constructed, including .in for:
 
-SCF:
-
-NSCF:
-
-Bands:
-
-etc..
+- SCF
+- NSCF, K points for evaluation are calculated as:
+    - A gamma centred mesh **defineKmesh(self, NKx, Nky, Nkz)**
+    - A set path **defineKmesh(self, highSymPoints)**
+- Bands.x
 
 
