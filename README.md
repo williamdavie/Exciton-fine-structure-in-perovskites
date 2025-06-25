@@ -13,6 +13,10 @@ University of Cambridge
 
 ## Quantum Espresso Pre-Processing
 
+### pervoskite_2D.py
+
+Defines a base class used throughout, trivial - formatting.
+
 ### build_unit_cell.py
 
 Sets up a unit cell with general formula Cs₂BX₄ according to distortion angles β and δ:
@@ -46,4 +50,17 @@ Relaxation details specific to our work:
 - Spin orbit coupling included.
 
 All final structures in CIF format are given in ./Structures
+
+### write_inputs.py
+
+Given a set of structures in a CIF file quantum espresso input files are constructed. 
+
+SCF:
+
+NSCF:
+
+Bands:
+
+etc..
+
 
