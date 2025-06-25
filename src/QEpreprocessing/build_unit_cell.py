@@ -238,7 +238,7 @@ _symmetry_Int_Tables_number       1
     prefix = '{self.B}{self.X}_{self.beta*180/np.pi:.1f}_{self.delta*180/np.pi:.1f}',
     outdir = '{self.outdir}',
     pseudo_dir = './pseudo/',
-    forc_conv_thr = 1.0d-1,
+    forc_conv_thr = 1e-3,
 /
     '''
     
