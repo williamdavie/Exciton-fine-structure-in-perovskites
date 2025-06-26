@@ -943,25 +943,6 @@ Cs               0.0063062288        0.5512435683       -0.1819284225
 
 #------------------------------------------------------
 
-data_15_7.5
-
-_symmetry_space_group_name_H-M    'P 1'
-_cell_length_a                    8.057009056
-_cell_length_b                    9.317401489 
-_cell_length_c                    16.0 
-_cell_angle_alpha                 90
-_cell_angle_beta                  90
-_cell_angle_gamma                 90
-_symmetry_Int_Tables_number       1
-
-loop_
-  _atom_site_type_symbol
-  _atom_site_fract_x
-  _atom_site_fract_y
-  _atom_site_fract_z
-
-#------------------------------------------------------
-
 data_17.5_7.5
 
 
