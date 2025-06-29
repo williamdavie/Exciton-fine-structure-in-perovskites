@@ -50,7 +50,8 @@ Relaxation details specific to our work:
 - Norm conserving fully relativistic pseudo potentials NC FR [pseudo-dojo](https://www.pseudo-dojo.org/) NC FR (ONCVPSP v0.4).
 - Spin orbit coupling included.
 
-All final structures in CIF format are given in [./Structures](https://github.com/williamdavie/Exciton-fine-structure-in-perovskites/tree/main/structures)
+All final structures in CIF format are given in [./Structures](https://github.com/williamdavie/Exciton-fine-structure-in-perovskites/tree/main/structures).
+Structures are considered `final' when force convergence (1e-3) is reached with angles within 2.d.p of the desired value. 
 
 ### write_inputs.py
 
