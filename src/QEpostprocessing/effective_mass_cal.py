@@ -30,10 +30,40 @@ def effectiveMassTensor2D(kpoints: np.ndarray, Evals: np.ndarray):
     j_Gamma = math.floor(kpoints.shape[1]/2)
     
     assert np.array(kpoints[i_Gamma,j_Gamma]).all() == np.array([0,0,0]).all(), "Must be gamma centred"
+    
+    # use formula for 5 point difference
+    
+    # assumes evenly spaced
+    dkx = round((kpoints[1,0] - kpoints[0,0])[0],10)
+    dky = round((kpoints[0,1] - kpoints[0,0])[1],10)
+    
+    assert dkx == dky, "must be a uniform grid dkx = dky"
+    
+    dk = dkx = dky
+    
+    #------------- d2/dx2 -------------
+    Exvals = Evals[i_Gamma,j_Gamma-2:j_Gamma+3].reshape(5)
+    
+    d2dx2 = fivePoint2ndDeriv(Exvals,dk)
 
+    #------------- d2/dy2 -------------
+    Eyvals = Evals[i_Gamma-2:i_Gamma+3,j_Gamma].reshape(5)
     
+    d2dy2 = fivePoint2ndDeriv(Eyvals,dk)
     
-    return None
+    #-------- d2/dxdy = d2/dydx -------
+    Exymesh = Evals[i_Gamma-2:i_Gamma+3,j_Gamma-2:j_Gamma+3].reshape(5,5)
+    
+    d2dxdy = d2dydx = fivePointMixedDeriv(Exymesh,dk) 
+    
+    M = np.zeros((2,2))
+    
+    M[0,0] = d2dx2
+    M[1,1] = d2dy2
+    M[0,1] = d2dxdy
+    M[1,0] = d2dydx
+    
+    return M
 
 def orderMesh(kpoints: np.ndarray, Evals: np.ndarray):
     '''
@@ -70,12 +100,36 @@ def orderMesh(kpoints: np.ndarray, Evals: np.ndarray):
         return kpoints3D.reshape(Nx,Ny,3),Evals3D.reshape(Nx,Ny)
     else:
         return kpoints3D,Evals3D
+    
+def fivePoint2ndDeriv(points: np.ndarray, stepsize: float) -> float:
+    '''
+    Uses a central difference to calculate the second derivative at the centre of 5 points
+    '''
+    assert points.shape[0]==5, 'must input 1D array of 5 points'
+    F = np.copy(points) # formatting
+    result = 1/(12 * stepsize**2) * ( - (F[0] + F[4]) 
+                                     + 16 * ( F[1] + F[3]) 
+                                     - 30 * F[2])
+    
+    return result
+
+def fivePointMixedDeriv(points: np.ndarray, stepsize: float) -> float:
+    '''
+    Uses a central difference to calculate the mixed derivative at the centre of a 5x5 mesh
+    '''
+    assert points.shape[0:2] == (5,5), 'must input a 5x5 array'
+    F = np.copy(points) 
+    result = 1/(600 * stepsize**2) * (-63 * (F[3,0] + F[4,1] + F[0,3] + F[1,4]) +
+                                      63 * (F[1,0] + F[0,1] + F[3,4] + F[4,3]) + 
+                                      44 * (F[4,0] + F[0,4] - F[0,0] - F[2,2]) + 
+                                      74 * (F[1,1] + F[3,3] - F[3,1] - F[1,3]))
+    
+    return result
         
         
 kvals,Evals = orderMesh(examplek,exampleE)
 
-effectiveMassTensor2D(kvals,Evals)
+M = effectiveMassTensor2D(kvals,Evals)
 
 
-    
     
