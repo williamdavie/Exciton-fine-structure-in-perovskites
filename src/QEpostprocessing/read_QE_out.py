@@ -137,4 +137,26 @@ def fetchBandData(filename: str):
     
     return kvalues, data
     
-   
+
+def fetchVBandCB(kpoints: np.ndarray, bandData: np.ndarray, fermilevel: float, 
+                 gaploc: np.ndarray=np.array([0,0,0])) -> tuple[np.ndarray]:
+    '''
+    Input: bandstructure data and a fermi level 
+    Returns: the highest valance band and lowest conduction band respectively
+    '''
+
+    gapIndex =  np.where(np.all(kpoints == gaploc, axis=1))[0]
+    
+    gapEnergies = bandData[gapIndex][0]
+    
+    valence_indices = [i for i, E in enumerate(gapEnergies) if E <= fermilevel]
+    hvb_index = max(valence_indices, key=lambda i: gapEnergies[i])
+
+    conduction_indices = [i for i, E in enumerate(gapEnergies) if E >= fermilevel]
+    lcb_index = min(conduction_indices, key=lambda i: gapEnergies[i])
+    
+    return bandData[:,hvb_index], bandData[:,lcb_index]
+    
+    
+    
+    
