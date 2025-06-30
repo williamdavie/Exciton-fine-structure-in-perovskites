@@ -66,6 +66,13 @@ Given a set of structures in a CIF file quantum espresso input files can be cons
 - 
 ## Quantum Espresso Post-Processing
 
+### read_QE_out.py
+
+Reads output files from QE including:
+
+- SCF/NSCF outputs to find and compute the band gap
+- bandstructure .dat files fetching the bandstructure for additional analysis/plotting
+
 ### effective_mass_cal.py
 
 Calculates the electron (and hole) effective mass $m^*$ using the following relation to curvature of the energy dispersion:
