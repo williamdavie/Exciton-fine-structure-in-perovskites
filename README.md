@@ -10,7 +10,8 @@ University of Cambridge
 ### Contents
 
 1. [Quantum Expresso Pre-Processing](#quantum-espresso-pre-processing)
-2. [Figure Creation](#figure-creation)
+2. [Quantum Expresso Post-Processing](#quantum-espresso-post-processing)
+3. [Figure Creation](#figure-creation)
 
 ## Quantum Espresso Pre-Processing
 
@@ -62,6 +63,16 @@ Given a set of structures in a CIF file quantum espresso input files can be cons
     - A gamma centred mesh **defineKmesh(self, NKx, Nky, Nkz)**
     - A set path **defineKmesh(self, highSymPoints)**
 - Bands.x
+- 
+## Quantum Espresso Post-Processing
+
+### effective_mass_cal.py
+
+Calculates the electron (and hole) effective mass $m^*$ using the following relation to curvature of the energy dispersion:
+
+$$ \Big{(}\frac{1}{m^*}\Big{)}_{i,j} = \frac{1}{\hbar{}^2}\frac{\partial{}E(\vec{k})}{\partial{}k_i\partial{}k_j}, $$
+
+where in our 2D case $i,j = x,y$. The equation is evaluated numerically using 5-point finite difference formula, as done [here](https://github.com/afonari/emc), see report.
 
 ## Figure Creation
 
