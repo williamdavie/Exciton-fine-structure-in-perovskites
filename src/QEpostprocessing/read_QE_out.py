@@ -1,161 +1,171 @@
 
 import numpy as np
+import math
 import re
 
 '''
 A selection of functions to read Quantum Espresso output files 
 '''
-#----------------------------------------------------
-# Band Gap:
-#----------------------------------------------------
 
-def fetchBandGap(filename: str, nbnd: int=140) -> float:
-    '''
-    Attempts to fetch the band gap for a QE PWSCF .out file
-    '''
+class readQEouput():
     
-    file = open(filename,'r')
-    lines = file.readlines()
-
-    values = np.zeros(nbnd)
-
-    gap = 0 
-    for i in range(len(lines)):
+    def __init__(self, filename: str):
+    
+        self.file = open(filename,'r')
+        self.lines = self.file.readlines()
+        self.numLines = len(self.lines)
         
-        if "highest occupied, lowest unoccupied level (ev):" in lines[i]:
-            
-            line = lines[i].strip()
-            line = re.split('[ ]+',line)
-            Hop = float(line[-1])
-            Lop = float(line[-2])
-            
-            gap = (Hop - Lop)
     
-    file.close()
-
-    return gap
-
-import os    
-
-def fetchDirBandGap(directory, store=True, printResults=True):
-    '''
-    Calls fetchBandGap() on a set of files in a directory.
-    '''
-    
-    # if store=True function is specifc to the 45 structures we are interested in 
-    gapLandscape = np.zeros(shape=(9,9))
-    angleVals = np.array([0,2.5,5,7.5,10,12.5,15,17.5,20])
-    
-    for filename in os.listdir(directory):
-    
-        gap = fetchBandGap(directory + '/' + filename)
+    def getCelldims(self):
+        '''
+        Retrieves the input celldims from the output file.
         
-        if printResults == True:
-            print(filename)
-            print(gap)
-            
-        if store == True:
-            
-            # assumes filename contains _beta_delta_ as setup
-            
-            underscore = [i for i, underscore in enumerate(filename) if underscore == '_']
-            beta = float(filename[underscore[0]+1:underscore[1]])
-            delta = float(filename[underscore[1]+1:underscore[2]])
-            
-            betaIndex = np.where(angleVals==beta)
-            deltaIndex = np.where(angleVals==delta)
-            
-            print(betaIndex)
-            print(deltaIndex)
-            
-            gapLandscape[betaIndex,deltaIndex] = gap
-            
-            
-    np.save('bandGapLandscape',gapLandscape)
-            
-            
-#fetchDirBandGap('./BandGaps_outFiles')
+        only for ibrav=0
+        '''
+        
+        # written for direct parsing into effective mass calculation
 
-#----------------------------------------------------
-# Band Structure:
-#----------------------------------------------------
-
-def fetchBandData(filename: str):
-    '''
-    Reads the data from a Quantum Espresso band structure. 
-    '''
-    
-    file = open(filename,'r')
-    lines = file.readlines()
-    
-    # fetch num bands and num k points
-    
-    header = lines[0].strip()
-    header = re.split('[,=/]',header)
-    
-    numBands = int(header[1])
-    numKpoints = int(header[3])
-    
-    data = np.zeros((numKpoints,numBands),dtype=np.float32)
-    
-    print(numBands,numKpoints)
-    
-    # number of values per line is 10
-    
-    # calculates the size of divisions. 
-    
-    if numBands % 10 == 0: 
-        div = numBands // 10 + 1 
-    else:
-        div = numBands // 10 + 2
-    
-    kvalues = np.zeros((numKpoints,3),dtype=np.float32)
+        self.celldims = np.zeros((3))
+        scale = 1
         
-    for index, line in enumerate(lines[1:]):
+        for i in range(self.numLines):
+            
+            line = self.lines[i]
+            linestrip = line.strip()
+            linesplit = re.split('[ ]+',linestrip)
+            
+            if 'celldm(1)' in line:
         
-        line = line.strip('\n')
-        
-        currentkpoint = index // div
-        divLine = index % div
-        
-        if divLine == 0: # then k point is here.
-            
-            line = re.split('[ ]+',line)
-            kvalues[currentkpoint]  = np.array([float(line[1]),float(line[2]),float(line[3])])
-            
-        else:
-            
-            line = re.split('[ ]+',line)
-            
-            # computes the start and end points of the current line
-            a = (divLine - 1) * 10
-            b = a + len(line[1:11])
-            
-            data[currentkpoint][a:b] = line[1:11]
-        
-    file.close()
-    
-    return kvalues, data
+                scale = float(linesplit[1]) * 0.529177 # Bohr -> Anstong conversion
+                
+            for i in range(3):
+                
+                if f'a({i+1})' in line:
+                    
+                    self.celldims[i] = float(linesplit[3+i]) * scale
+                    
+        return self.celldims
     
 
-def fetchVBandCB(kpoints: np.ndarray, bandData: np.ndarray, fermilevel: float, 
-                 gaploc: np.ndarray=np.array([0,0,0])) -> tuple[np.ndarray]:
-    '''
-    Input: bandstructure data and a fermi level 
-    Returns: the highest valance band and lowest conduction band respectively
-    '''
+    def fetchBandGap(self) -> float:
+        '''
+        Fetches the band gap for a QE PWSCF .out file
+        '''
+        
+        for i in range(self.numLines):
+            
+            line = self.lines[i]
+        
+            if "highest occupied, lowest unoccupied level (ev):" in line:
+            
+                line = re.split('[ ]+',line)
+                self.Elumo = float(line[-1])
+                self.Ehomo = float(line[-2])
+            
+                self.gap = abs(self.Ehomo - self.Elumo)
+                
+                
+        return self.gap
+    
+    
+    def fetchBandStructure(self) -> tuple[np.ndarray]:
+        '''
+        Reads the bandstructure from an nscf output file
+        '''
+        
+        self.nbnds = 0
+        self.Nk = 0
+        
+        # first fetch number of bands and k points
+        
+        for i in range(self.numLines):
+            
+            line = self.lines[i]
+            linestrip = line.strip()
+            linesplit = re.split('[ ]+',linestrip)
+            
+            if "number of Kohn-Sham states" in line:
+                self.nbnds = int(linesplit[-1])
+            
+            if "number of k points" in line:
+                self.Nk = int(linesplit[-1])
+                
+        # then set the values
+              
+        self.kpoints = np.zeros((self.Nk,3))
+        self.bandData = np.zeros((self.Nk,self.nbnds))
+        numBandLines = math.ceil(self.nbnds / 8)
+        currentIndex = 0
+        
+        for i in range(self.numLines):
+            
+            line = self.lines[i]
+            linestrip = line.strip()
+            linesplit = re.split('[ ]+',linestrip)
+            
+    
+            
+            if "bands (ev)" in line:
+                
+                # --------- K points ---------
+                
+                # minus signs fill space so split doesn't work correctly
+                
+                minusSigns = [i for i, minusSign in enumerate(line) if minusSign == '-']
+                newLine = line
+                numFix = 0
+                for j in minusSigns:
+                    newLine = newLine[:(j+numFix)] + " " + newLine[(j+numFix):]
+                    numFix += 1
+                
+                newLine = newLine.strip()
+                newLine = re.split('[ ]+',newLine)
+                
+                kpoint = np.array([newLine[2],newLine[3],newLine[4]],dtype=np.float32)
+            
+                self.kpoints[currentIndex] = kpoint
+                
+                # --------- Energy values ---------
+                
+                Block = " ".join(line.strip() for line in self.lines[(i+2):(i+2+numBandLines)])
+                try:
+                    Evals = np.array(re.split('[ ]+',Block))
+                except:
+                    "file in incorrect format, looking for nscf .out"
+                
+                self.bandData[currentIndex] = Evals
 
-    gapIndex =  np.where(np.all(kpoints == gaploc, axis=1))[0]
+                currentIndex += 1
+                
     
-    gapEnergies = bandData[gapIndex][0]
+        return self.kpoints,self.bandData
     
-    valence_indices = [i for i, E in enumerate(gapEnergies) if E <= fermilevel]
-    hvb_index = max(valence_indices, key=lambda i: gapEnergies[i])
+    
+    def fetchLCBandHVB(self):
+        '''
+        Returns the highest valance band and lowest conduction band respectively
+        uses results from both functions above: fetchBandstructure and fetchBandgap
+        '''    
+        
+        HVBindex = 0,0
+        LCBindex = 0,0
 
-    conduction_indices = [i for i, E in enumerate(gapEnergies) if E >= fermilevel]
-    lcb_index = min(conduction_indices, key=lambda i: gapEnergies[i])
+        for i in range(self.Nk):
+            for j in range(self.nbnds):
+                if self.bandData[i,j] == self.Ehomo:
+                    HVBindex = i,j
+                    
+                if self.bandData[i,j] == self.Elumo:
+                    LCBindex = i,j
+                    
+        assert HVBindex[0] == LCBindex[0], "Band gap must be direct"        
+
+        HVB = self.bandData[:,HVBindex[1]]
+        LCB = self.bandData[:,LCBindex[1]]
+        
+        return HVB,LCB
+
     
-    return bandData[:,hvb_index], bandData[:,lcb_index]
     
     
     
