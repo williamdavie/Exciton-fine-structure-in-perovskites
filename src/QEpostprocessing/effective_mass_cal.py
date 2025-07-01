@@ -5,10 +5,7 @@ Given a band for a 2D semi-conductor, the effective mass tensor is calculated us
 '''
 import numpy as np
 import math 
-from read_QE_output import *
-
-# Example data 
-
+from read_QE_output import readQEoutput
 
 def effectiveMassTensor2D(kpoints: np.ndarray, Evals: np.ndarray, celldims: np.ndarray):
     '''
@@ -48,7 +45,7 @@ def effectiveMassTensor2D(kpoints: np.ndarray, Evals: np.ndarray, celldims: np.n
     #-------- d2/dxdy = d2/dydx -------
     Exymesh = Evals[i_Gamma-2:i_Gamma+3,j_Gamma-2:j_Gamma+3].reshape(5,5)
     
-    d2dxdy = d2dydx = MixedDeriv(Exymesh,dkx,dky) 
+    d2dxdy = d2dydx = fivePointMixedDeriv(Exymesh,dkx,dky) 
     
     M = np.zeros((2,2))
     
@@ -57,7 +54,7 @@ def effectiveMassTensor2D(kpoints: np.ndarray, Evals: np.ndarray, celldims: np.n
     M[0,1] = d2dxdy
     M[1,0] = d2dydx
     
-    M = 1/(6.582e-16)**2*M*((1e-10)**2)*(1/(1.602e-19))
+    M = 1/(6.582e-16)**2*M*((1e-10)**2)*(1/(1.602e-19)) # units 
     
     return M
 
@@ -109,13 +106,78 @@ def fivePoint2ndDeriv(points: np.ndarray, stepsize: float) -> float:
     
     return result
 
-
-def MixedDeriv(points: np.ndarray, stepsize1: float, stepsize2: float) -> float:
+def fivePointMixedDeriv(points: np.ndarray, stepsize1: float, stepsize2: float) -> float:
     '''
-    Uses a central difference to calculate the mixed derivative
+    Uses a central difference to calculate the mixed derivative at the centre of a 5x5 mesh
+    
+    accuracy of order O(dk^4)
     '''
     assert points.shape[0:2] == (5,5), 'must input a 5x5 array'
     F = np.copy(points) 
-    result = 1/(4*stepsize1*stepsize2) * (F[3,3] - F[3,1] - F[1,3] + F[1,1])
+    result = 1/(600 * stepsize1*stepsize2) * (-63 * (F[3,0] + F[4,1] + F[0,3] + F[1,4]) +
+                                      63 * (F[1,0] + F[0,1] + F[3,4] + F[4,3]) + 
+                                      44 * (F[4,0] + F[0,4] - F[0,0] - F[4,4]) + 
+                                      74 * (F[1,1] + F[3,3] - F[3,1] - F[1,3]))
+    
     return result
+
+
+def fetchDirEffectiveMass(directory: str, 
+                    store: bool=True, printResults: bool=True, outputfilename: str='EffectiveMassLandscape'):
+    '''
+    
+    Reads a selection of nscf output files and reads the effective mass computes the effective mass 
+    relies on specific formating. 
+    '''
+    
+    # Similar format to fetchDirBandGap()
+    
+    # if store=True function is specifc to the 45 structures we are interested in 
+    effectiveMassLandscape = np.zeros(shape=(9,9))
+    angleVals = np.array([0,2.5,5,7.5,10,12.5,15,17.5,20])
+    
+    for filename in os.listdir(directory):
+        
+        # use class readQEouput to fetch relevant output data
+        
+        fileData = readQEouput(directory + '/' + filename)
+        celldims = fileData.getCelldims()
+        fileData.fetchBandGap() # needed for LCB and HVB 
+        kpoints, Evals = fileData.fetchBandStructure()
+        E_HVB, E_LCB = fileData.fetchLCBandHVB()
+        
+        # reformat the data
+        kvals,Evals = orderMesh(kpoints,E_HVB)
+        
+        # compute m*
+        M = effectiveMassTensor2D(kvals,Evals,celldims)
+        eigvals, eigvecs = np.linalg.eig(M)
+        eigvals = 1/(eigvals * 9.1093837e-31) # in terms of m0
+        mval = math.sqrt(eigvals[0]**2 + eigvals[1]**2)
+        print(eigvals[0],eigvals[1])
+        
+        
+        if printResults == True:
+            print(filename)
+            print(mval)
+            
+        if store == True:
+            
+            # assumes filename contains _beta_delta_ as setup
+            
+            underscore = [i for i, underscore in enumerate(filename) if underscore == '_']
+            beta = float(filename[underscore[0]+1:underscore[1]])
+            delta = float(filename[underscore[1]+1:underscore[2]])
+            
+            betaIndex = np.where(angleVals==beta)
+            deltaIndex = np.where(angleVals==delta)
+            
+            print(betaIndex)
+            print(deltaIndex)
+            
+            effectiveMassLandscape[betaIndex,deltaIndex] = mval
+            
+            
+    np.save(outputfilename,effectiveMassLandscape)
+    
     

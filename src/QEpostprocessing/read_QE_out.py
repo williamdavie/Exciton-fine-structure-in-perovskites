@@ -4,7 +4,6 @@ Functions to read data from QE .out files
 
 '''
 
-
 import numpy as np
 import math
 import re
@@ -55,7 +54,7 @@ class readQEouput():
         '''
         Fetches the band gap for a QE PWSCF .out file
         '''
-        
+        self.gap = 0
         for i in range(self.numLines):
             
             line = self.lines[i]
@@ -169,7 +168,7 @@ class readQEouput():
         
         return HVB,LCB
 
-            
+        
 def fetchDirBandGap(directory: str, 
                     store: bool=True, printResults: bool=True, outputfilename: str='bandGapLandscape'):
     '''
@@ -207,7 +206,6 @@ def fetchDirBandGap(directory: str,
             
             
     np.save(outputfilename,gapLandscape)
-
     
     
     
