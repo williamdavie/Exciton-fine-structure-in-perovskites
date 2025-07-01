@@ -1,11 +1,15 @@
+'''
+
+Functions to read data from QE .out files
+
+'''
+
 
 import numpy as np
 import math
 import re
+import os   
 
-'''
-A selection of functions to read Quantum Espresso output files 
-'''
 
 class readQEouput():
     
@@ -16,7 +20,7 @@ class readQEouput():
         self.numLines = len(self.lines)
         
     
-    def getCelldims(self):
+    def getCelldims(self) -> np.ndarray:
         '''
         Retrieves the input celldims from the output file.
         
@@ -141,7 +145,7 @@ class readQEouput():
         return self.kpoints,self.bandData
     
     
-    def fetchLCBandHVB(self):
+    def fetchLCBandHVB(self) -> tuple[np.ndarray]:
         '''
         Returns the highest valance band and lowest conduction band respectively
         uses results from both functions above: fetchBandstructure and fetchBandgap
@@ -165,7 +169,45 @@ class readQEouput():
         
         return HVB,LCB
 
+            
+def fetchDirBandGap(directory: str, 
+                    store: bool=True, printResults: bool=True, outputfilename: str='bandGapLandscape'):
+    '''
+    Calls fetchBandGap() on a set of files in a directory.
+    '''
     
+    # if store=True function is specifc to the 45 structures we are interested in 
+    gapLandscape = np.zeros(shape=(9,9))
+    angleVals = np.array([0,2.5,5,7.5,10,12.5,15,17.5,20])
+    
+    for filename in os.listdir(directory):
+        
+        fileData = readQEouput(directory + '/' + filename)
+        gap = fileData.fetchBandGap()
+        
+        if printResults == True:
+            print(filename)
+            print(gap)
+            
+        if store == True:
+            
+            # assumes filename contains _beta_delta_ as setup
+            
+            underscore = [i for i, underscore in enumerate(filename) if underscore == '_']
+            beta = float(filename[underscore[0]+1:underscore[1]])
+            delta = float(filename[underscore[1]+1:underscore[2]])
+            
+            betaIndex = np.where(angleVals==beta)
+            deltaIndex = np.where(angleVals==delta)
+            
+            print(betaIndex)
+            print(deltaIndex)
+            
+            gapLandscape[betaIndex,deltaIndex] = gap
+            
+            
+    np.save(outputfilename,gapLandscape)
+
     
     
     
