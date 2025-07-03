@@ -5,7 +5,8 @@ Given a band for a 2D semi-conductor, the effective mass tensor is calculated us
 '''
 import numpy as np
 import math 
-from read_QE_output import readQEoutput
+from read_QE_output import readQEouput
+import os
 
 def effectiveMassTensor2D(kpoints: np.ndarray, Evals: np.ndarray, celldims: np.ndarray):
     '''
@@ -144,7 +145,7 @@ def fetchDirEffectiveMass(directory: str,
         celldims = fileData.getCelldims()
         fileData.fetchBandGap() # needed for LCB and HVB 
         kpoints, Evals = fileData.fetchBandStructure()
-        E_HVB, E_LCB = fileData.fetchLCBandHVB()
+        E_HVB, E_LCB = fileData.fetchHVBandLCB()
         
         # reformat the data
         kvals,Evals = orderMesh(kpoints,E_HVB)

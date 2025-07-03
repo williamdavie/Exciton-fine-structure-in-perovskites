@@ -144,7 +144,7 @@ class readQEouput():
         return self.kpoints,self.bandData
     
     
-    def fetchLCBandHVB(self) -> tuple[np.ndarray]:
+    def fetchHVBandLCB(self) -> tuple[np.ndarray]:
         '''
         Returns the highest valance band and lowest conduction band respectively
         uses results from both functions above: fetchBandstructure and fetchBandgap
