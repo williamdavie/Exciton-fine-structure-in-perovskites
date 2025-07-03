@@ -10,6 +10,8 @@ University of Cambridge
 ### Contents
 
 1. [Quantum Expresso Pre-Processing](#quantum-espresso-pre-processing)
+2. [Quantum Expresso Post-Processing](#quantum-espresso-post-processing)
+3. [Figure Creation](#figure-creation)
 
 ## Quantum Espresso Pre-Processing
 
@@ -40,7 +42,7 @@ $$L = \sqrt{\frac{L_0^2(1 + \tan{\beta}^2)}{(1 + \cos{\theta}^2\tan{\delta}^2)}}
 
 where $L_0 = \frac{1}{4}\sqrt{a^2 + b^2}$ (see report for detail).
 
-Once the cell is constructed it may be viewed via an output CIF file {**writeCIF(self)**} and relaxed via QE {**writeRelaxationInput(self)**}.
+Once the cell is constructed it may be viewed via an output CIF file **writeCIF(self)** and relaxed via QE **writeRelaxationInput(self)**.
 
 Relaxation details specific to our work:
 
@@ -49,18 +51,36 @@ Relaxation details specific to our work:
 - Norm conserving fully relativistic pseudo potentials NC FR [pseudo-dojo](https://www.pseudo-dojo.org/) NC FR (ONCVPSP v0.4).
 - Spin orbit coupling included.
 
-All final structures in CIF format are given in ./Structures
+All final structures in CIF format are given in [./Structures](https://github.com/williamdavie/Exciton-fine-structure-in-perovskites/tree/main/structures).
+Structures are considered `final' when force convergence (1e-3) is reached with angles within 2.d.p of the desired value. 
 
 ### write_inputs.py
 
-Given a set of structures in a CIF file quantum espresso input files are constructed. 
+Given a set of structures in a CIF file quantum espresso input files can be constructed, including .in for:
 
-SCF:
+- SCF
+- NSCF, K points for evaluation are calculated as:
+    - A gamma centred mesh **defineKmesh(self, NKx, Nky, Nkz)**
+    - A set path **defineKmesh(self, highSymPoints)**
+- Bands.x
+- 
+## Quantum Espresso Post-Processing
 
-NSCF:
+### read_QE_out.py
 
-Bands:
+Reads output files from QE including:
 
-etc..
+- SCF/NSCF outputs to find and compute the band gap
+- bandstructure .dat files fetching the bandstructure for additional analysis/plotting
+
+### effective_mass_cal.py
+
+Calculates the electron (and hole) effective mass $m^*$ using the following relation to curvature of the energy dispersion:
+
+$$ \Big{(}\frac{1}{m^*}\Big{)}_{i,j} = \frac{1}{\hbar{}^2}\frac{\partial{}E(\vec{k})}{\partial{}k_i\partial{}k_j}, $$
+
+where in our 2D case $i,j = x,y$. The equation is evaluated numerically using 5-point finite difference formula, as done [here](https://github.com/afonari/emc), see report.
+
+## Figure Creation
 
 
