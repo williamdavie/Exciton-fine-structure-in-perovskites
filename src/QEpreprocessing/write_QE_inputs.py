@@ -11,22 +11,12 @@ Assumes the following formatting title as: data_beta_delta
 import numpy as np
 import re
 from typing import List
+import math
 from perovskite_2D import perovskite2D
 
 #------------------------------------------------
-# Input 
 
-filename = '(Cs)2_PbI4_structures_0_2.5.cif'
-
-Kpath = [
-    np.array([0.5000, 0.5000, 0.0]),
-    np.array([0.0000, 0.0000, 0.0]),
-    np.array([0.5000, 0.0000, 0.0])
-]
-
-#------------------------------------------------
-
-class buildInputFiles(perovskite2D):
+class writeQEinput(perovskite2D):
     
     def __init__(self, filename: str, FullRel=True, startline: int=0, endline: int=None) -> None:
         
@@ -137,26 +127,36 @@ class buildInputFiles(perovskite2D):
         '''
         Defines a gamma centred k point mesh, used for effective mass calculations
         '''
+        assert Nkx % 2 == 1 and Nky % 2 == 1 and Nkz % 2 == 1, 'Must be odd to be gamma centred'
         
         self.Kpath = f'K_POINTS crystal\n{Nkx*Nky*Nkz}\n'
+        Karray = np.zeros((Nkx,Nky,Nkz,3))
         for i in range(Nkx):
             for j in range(Nky):
                 for k in range(Nkz):
                     
-                    x = i / Nkx * scale
-                    y = j / Nky * scale
-                    z = k / Nkz * scale
-
-                self.Kpath += f'{x:.10f} {y:.10f} {z:.10f} 1\n'
+                    # -math.floor(N/2)/N centres the grid around Gamma as long as the first assert is satisfied.
+                    
+                    x = (i / Nkx - math.floor(Nkx/2)/Nkx) * scale
+                    y = (j / Nky - math.floor(Nky/2)/Nkx) * scale
+                    z = (k / Nkz - math.floor(Nkz/2)/Nkx) * scale
+                    
+                    self.Kpath += f'{x:.10f} {y:.10f} {z:.10f} 1\n'
+                    Karray[i,j,k] = np.array([x,y,z])
+                
 
         if outputFile == True:
             with open(f'kpoints_{Nkx}x{Nky}x{Nkz}_gamma.in', 'w') as f:
                 f.write(self.Kpath)
+            np.save(f'kpoints_{Nkx}x{Nky}x{Nkz}_gamma',Karray.reshape(Nkx*Nky*Nkz,3))
+                
+            
         
     #---------------------------------------------
         
 
-    def writePWSCF(self, calculation: str, outdir: str) -> None:
+    def writePWSCF(self, calculation: str, outdir: str, 
+                   nbnd: int=140, assume_isolated: str='2D') -> None:
         '''
         Writes a PWSCF input for each structure.
         '''
@@ -173,12 +173,13 @@ class buildInputFiles(perovskite2D):
     ibrav = 0,
     nat = 14,
     ntyp = 3,
-    nbnd = 150,
+    nbnd = {nbnd},
     ecutwfc = 80,
     ecutrho = 320,
     noncolin = .{self.isRel}.,
     lspinorb = .{self.isRel}.,
     occupations = 'fixed',
+    assume_isolated = '{assume_isolated}'
 /'''
             electrons = '''&electrons
     conv_thr = 1.0d-8,
@@ -234,25 +235,11 @@ class buildInputFiles(perovskite2D):
         for i in range(self.numStructures):
             
             input = f'''&bands
-    prefix = 'CsSnI_{self.beta_vals[i]}_{self.delta_vals[i]}',
+    prefix = '{self.prefix}_{self.beta_vals[i]}_{self.delta_vals[i]}',
     outdir = '/local/data/public/wd324/QEout/',
-    filband='CsSnI_{self.beta_vals[i]}_{self.delta_vals[i]}_band.dat'
+    filband='{self.prefix}_{self.beta_vals[i]}_{self.delta_vals[i]}_band.dat'
 /  
     '''
             with open(f"./{outdir}/{self.prefix}_{self.beta_vals[i]}_{self.delta_vals[i]}_bands.in", "w") as file:
          
                 file.write(input)
-            
-        
-        
-# Standard run 
-#------------------------------------------------
- 
-data = buildInputFiles(filename)
-data.writePWSCF('scf','SCF_0_2.5_files')
-data.defineKmesh(5,5,1,scale=1/2,outputFile=True)
-data.writePWSCF('nscf','SCF_0_2.5_files')
-        
-#------------------------------------------------
- 
-        

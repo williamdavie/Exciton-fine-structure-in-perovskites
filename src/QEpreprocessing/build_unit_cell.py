@@ -16,28 +16,9 @@ from perovskite_2D import perovskite2D
 
 #------------------------------------------------
 
-#Input params (Example)
-
-celldims = np.array([   8.257517092 ,  9.647622767  , 16])
-beta = 20
-delta = 15
-
-FullRel = True
-
-CsAtomStr = '''
-#Cs               0.5097963245        0.0437604980        0.1785136830
-#Cs               0.0097963245        0.4562395020        0.1785136830
-#Cs               0.4902036755       -0.0437604980       -0.1785136830
-#Cs              -0.0097963245        0.5437604980       -0.1785136830
-'''
-
-nbnd = 140
-
-#------------------------------------------------
-
 class BuildUnitCell(perovskite2D):
     
-    def __init__(self,celldims: np.ndarray, beta: float, delta: float):
+    def __init__(self, celldims: np.ndarray, beta: float, delta: float):
         
         super().__init__(B='Pb', Bmass=207.2, X='I', Xmass='126.9') # change accordingly if working with a different structure.
         
@@ -238,7 +219,6 @@ _symmetry_Int_Tables_number       1
     prefix = '{self.B}{self.X}_{self.beta*180/np.pi:.1f}_{self.delta*180/np.pi:.1f}',
     outdir = '{self.outdir}',
     pseudo_dir = './pseudo/',
-    forc_conv_thr = 1e-3,
 /
     '''
     
@@ -320,27 +300,10 @@ _symmetry_Int_Tables_number       1
                 file.write(f'{self.X} {self.XAtomList[i][0]} {self.XAtomList[i][1]} {self.XAtomList[i][2]} 0 0 0 \n')
                 
             for i in range(len(self.CsAtomList)):
-                file.write(f'{self.A} {self.CsAtomList[i][0]} {self.CsAtomList[i][1]} {self.CsAtomList[i][2]} 1 1 1 \n')
+                file.write(f'Cs {self.CsAtomList[i][0]} {self.CsAtomList[i][1]} {self.CsAtomList[i][2]} 1 1 1 \n')
             
             file.write('\n')
             file.write(Kpoints)
             
             
         #------------------------------------------------
-        
-        
-
-
-# Standard run (Example)
-#------------------------------------------------
- 
- 
-cell = BuildUnitCell(celldims,beta,delta)
-cell.locateBXAtoms()
-cell.readCsPositions(CsAtomStr)
-cell.writeCIF()
-cell.writeRelaxationInput(FullRel,nbnd)
-
-#------------------------------------------------
- 
-
