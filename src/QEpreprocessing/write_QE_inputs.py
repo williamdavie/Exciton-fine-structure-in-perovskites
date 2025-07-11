@@ -9,16 +9,18 @@ Assumes the following formatting title as: data_beta_delta
 '''
 
 import numpy as np
-import re
 from typing import List
-import math
+import math, re, sys, os
+sys.path.insert(0, os.path.abspath(os.path.join(__file__, "..", "..")))
 from perovskite_2D import perovskite2D
+from QEpostprocessing.read_QE_output import readQEouput
 
 #------------------------------------------------
 
 class writeQEinput(perovskite2D):
     
-    def __init__(self, filename: str, FullRel=True, startline: int=0, endline: int=None) -> None:
+    def __init__(self, filename: str, FullRel=True, 
+                 startline: int=0, endline: int=None) -> None:
         
         super().__init__(B='Pb', Bmass=207.2, X='I', Xmass='126.9')
         
@@ -104,7 +106,7 @@ class writeQEinput(perovskite2D):
         
         '''
         numHSpoints = len(highSymPoints)
-        self.Kpath = f'K_POINTS crystal\n{len(numSteps*(numHSpoints-1)+1)}\n'
+        self.Kpath = f'K_POINTS crystal\n{(numSteps*(numHSpoints-1)+1)}\n'
         
         for i in range(1,numHSpoints):
             
@@ -116,6 +118,10 @@ class writeQEinput(perovskite2D):
                 point = start + (end-start) * j/numSteps
                 
                 self.Kpath += f'{point[0]:.10f} {point[1]:.10f} {point[2]:.10f} 1\n'
+        
+        # add the last point
+        finalpoint = highSymPoints[len(highSymPoints)-1]
+        self.Kpath += f'{finalpoint[0]:.10f} {finalpoint[1]:.10f} {finalpoint[2]:.10f} 1\n'
         
         if outputFile == True:
             with open(f'kpoints_{highSymPoints[0]}-{highSymPoints[numHSpoints]}.in', 'w') as f:
@@ -156,7 +162,8 @@ class writeQEinput(perovskite2D):
         
 
     def writePWSCF(self, calculation: str, outdir: str, 
-                   nbnd: int=140, assume_isolated: str='2D') -> None:
+                   nbnd: int=140, assume_isolated: str='2D', verbosity: str='low',
+                   postfix: str='') -> None:
         '''
         Writes a PWSCF input for each structure.
         '''
@@ -166,16 +173,17 @@ class writeQEinput(perovskite2D):
             control = f'''&control
     calculation = '{calculation}',
     prefix = '{self.prefix}_{self.beta_vals[i]}_{self.delta_vals[i]}',
-    outdir = '/local/data/public/wd324/QEout/',
-    pseudo_dir = './pseudo/',
+    outdir = '/home/wd324/rds/hpc-work/CsPbI_Out',
+    pseudo_dir = '/home/wd324/pseudo',
+    verbosity = '{verbosity}'
 /'''
             system = f'''&system
     ibrav = 0,
     nat = 14,
     ntyp = 3,
     nbnd = {nbnd},
-    ecutwfc = 80,
-    ecutrho = 320,
+    ecutwfc = 90,
+    ecutrho = 360,
     noncolin = .{self.isRel}.,
     lspinorb = .{self.isRel}.,
     occupations = 'fixed',
@@ -209,7 +217,7 @@ class writeQEinput(perovskite2D):
                 assert self.Kpath is not None, "Must define a Kpath defineKpath()"
                 Kpoints = self.Kpath
     
-            with open(f"./{outdir}/{self.prefix}_{self.beta_vals[i]}_{self.delta_vals[i]}_{calculation}.in", "w") as file:
+            with open(f"./{outdir}/{self.prefix}_{self.beta_vals[i]}_{self.delta_vals[i]}_{calculation}{postfix}.in", "w") as file:
         
                 file.write(control)
                 file.write('\n')
