@@ -5,8 +5,10 @@ Given a band for a 2D semi-conductor, the effective mass tensor is calculated us
 '''
 import numpy as np
 import math 
-from read_QE_output import readQEouput
 import os
+import sys,os
+sys.path.insert(0, os.path.abspath(os.path.join(__file__, "..", "..")))
+from QEpostprocessing.read_QE_output import readQEouput
 
 def effectiveMassTensor2D(kpoints: np.ndarray, Evals: np.ndarray, celldims: np.ndarray):
     '''
@@ -142,13 +144,16 @@ def fetchDirEffectiveMass(directory: str,
         # use class readQEouput to fetch relevant output data
         
         fileData = readQEouput(directory + '/' + filename)
+        print(directory + '/' + filename)
         celldims = fileData.getCelldims()
         fileData.fetchBandGap() # needed for LCB and HVB 
-        kpoints, Evals = fileData.fetchBandStructure()
+        print(fileData.gap)
+        kpoints, Evals = fileData.fetchBandStructure(verbosity='low')
         E_HVB, E_LCB = fileData.fetchHVBandLCB()
         
         # reformat the data
-        kvals,Evals = orderMesh(kpoints,E_HVB)
+        kvals,Evals = orderMesh(kpoints,E_LCB)
+        np.save(f'{filename[0:-4]}_Evals',Evals)
         
         # compute m*
         M = effectiveMassTensor2D(kvals,Evals,celldims)
@@ -172,9 +177,6 @@ def fetchDirEffectiveMass(directory: str,
             
             betaIndex = np.where(angleVals==beta)
             deltaIndex = np.where(angleVals==delta)
-            
-            print(betaIndex)
-            print(deltaIndex)
             
             effectiveMassLandscape[betaIndex,deltaIndex] = mval
             

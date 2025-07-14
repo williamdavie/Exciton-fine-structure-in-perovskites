@@ -15,7 +15,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(__file__, "..", "..")))
 from perovskite_2D import perovskite2D
 from QEpostprocessing.read_QE_output import readQEouput
 
-#------------------------------------------------
 
 class writeQEinput(perovskite2D):
     
@@ -167,14 +166,14 @@ class writeQEinput(perovskite2D):
         '''
         Writes a PWSCF input for each structure.
         '''
-    
+        
         for i in range(self.numStructures):
             
             control = f'''&control
     calculation = '{calculation}',
     prefix = '{self.prefix}_{self.beta_vals[i]}_{self.delta_vals[i]}',
-    outdir = '/home/wd324/rds/hpc-work/CsPbI_Out',
-    pseudo_dir = '/home/wd324/pseudo',
+    outdir = '/local/data/public/wd324/QEout/',
+    pseudo_dir = './pseudo',
     verbosity = '{verbosity}'
 /'''
             system = f'''&system

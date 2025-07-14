@@ -71,13 +71,15 @@ class readQEouput():
         return self.gap
     
     
-    def fetchBandStructure(self) -> tuple[np.ndarray]:
+    def fetchBandStructure(self, verbosity: str='low') -> tuple[np.ndarray]:
         '''
         Reads the bandstructure from an nscf output file
         '''
         
         self.nbnds = 0
         self.Nk = 0
+        
+        assert verbosity == 'high' or verbosity == 'low', 'Incorrect verbosity input'
         
         # first fetch number of bands and k points
         
@@ -90,11 +92,14 @@ class readQEouput():
             if "number of Kohn-Sham states" in line:
                 self.nbnds = int(linesplit[-1])
             
-            if "number of k points" in line:
+            if "number of k points" in line and verbosity == 'low':
                 self.Nk = int(linesplit[-1])
                 
+            if 'init_us_2' in line and verbosity == 'high': # depends on whether high or low verbosity has been used
+                self.Nk = int(linesplit[-2])
+                
+                
         # then set the values
-              
         self.kpoints = np.zeros((self.Nk,3))
         self.bandData = np.zeros((self.Nk,self.nbnds))
         numBandLines = math.ceil(self.nbnds / 8)
@@ -110,6 +115,13 @@ class readQEouput():
             
             if "bands (ev)" in line:
                 
+                if verbosity == 'high':
+                    
+                    if 'occupation numbers' in self.lines[i+3 + numBandLines]:
+                        pass # exit out of if statement
+                    else:
+                        continue # move onto next line
+              
                 # --------- K points ---------
                 
                 # minus signs fill space so split doesn't work correctly
@@ -136,7 +148,10 @@ class readQEouput():
                 except:
                     "file in incorrect format, looking for nscf .out"
                 
-                self.bandData[currentIndex] = Evals
+                try:
+                    self.bandData[currentIndex] = Evals
+                except:
+                    pass
 
                 currentIndex += 1
                 
@@ -161,8 +176,10 @@ class readQEouput():
                 if self.bandData[i,j] == self.Elumo:
                     LCBindex = i,j
                     
-        assert HVBindex[0] == LCBindex[0], "Band gap must be direct"        
-
+        #assert HVBindex[0] == LCBindex[0], "Band gap must be direct"        
+        if HVBindex[0] != LCBindex[0]:
+            print('Warning <!> : Band gap indirect')
+        
         HVB = self.bandData[:,HVBindex[1]]
         LCB = self.bandData[:,LCBindex[1]]
         
@@ -206,7 +223,3 @@ def fetchDirBandGap(directory: str,
             
             
     np.save(outputfilename,gapLandscape)
-    
-    
-    
-    
