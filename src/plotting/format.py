@@ -4,6 +4,8 @@ File to store figure format.
 
 import matplotlib.pyplot as plt
 
+colourPalette = ['#F24405','#FA7F08','#9EF8EE','#22BABB','#348888']
+
 def runFormat() -> None:
     
     plt.rcParams['figure.constrained_layout.use'] = True
