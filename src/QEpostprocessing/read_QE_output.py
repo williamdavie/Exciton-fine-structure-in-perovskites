@@ -1,7 +1,7 @@
 '''
 Read data from QE .out files
 
-William Davie 06/24
+William Davie 06/25
 '''
 
 
