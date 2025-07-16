@@ -1,19 +1,23 @@
 '''
+Read data from QE .out files
 
-Functions to read data from QE .out files
-
+William Davie 06/24
 '''
+
 
 import numpy as np
 import math
 import re
 import os   
+import pandas as pd
 
+#---------------------------------------------------------------------------------
 
 class readQEouput():
     
     def __init__(self, filename: str):
-    
+        
+        self.filename = filename
         self.file = open(filename,'r')
         self.lines = self.file.readlines()
         self.numLines = len(self.lines)
@@ -121,7 +125,8 @@ class readQEouput():
                         pass # exit out of if statement
                     else:
                         continue # move onto next line
-              
+            
+                
                 # --------- K points ---------
                 
                 # minus signs fill space so split doesn't work correctly
@@ -184,7 +189,21 @@ class readQEouput():
         LCB = self.bandData[:,LCBindex[1]]
         
         return HVB,LCB
-
+    
+    
+    def readProjDOS(self, DOScol: float=1) -> tuple[np.ndarray]:
+        '''
+        Reads the DOS frok a projwfc output. 
+        '''
+        data = np.loadtxt(self.filename, comments='#')
+        
+        energy = data[:,0]
+        DOS = data[:,1]
+        
+        return energy,DOS
+        
+   
+#---------------------------------------------------------------------------------     
         
 def fetchDirBandGap(directory: str, 
                     store: bool=True, printResults: bool=True, outputfilename: str='bandGapLandscape'):
@@ -223,3 +242,35 @@ def fetchDirBandGap(directory: str,
             
             
     np.save(outputfilename,gapLandscape)
+
+#---------------------------------------------------------------------------------
+
+def sumDirDOS(directory: str, AtomTag: str, OrbitalTag: str) -> np.ndarray:
+    '''
+    Returns: Sum of all projDOS with atomTag and OrbitalTag in the file name. 
+    '''
+    
+    filesToSum = []
+    for filename in os.listdir(directory):
+
+        if ('(' + AtomTag + ')') in filename:
+            if (OrbitalTag + '_i') in filename or (OrbitalTag + '_j') in filename:
+            
+                filesToSum.append(filename)
+                
+        
+    data = readQEouput(directory + '/' + filesToSum[0])
+    initEnergy, initDOS = data.readProjDOS()    
+    
+    totalDOS = initDOS
+    
+    for filename in filesToSum[1:]:
+        
+        data = readQEouput(directory + '/' + filename)
+        energy, DOS = data.readProjDOS()
+        
+        assert energy.all() == initEnergy.all(), 'All must have DOS files must be over the same energy range.'
+        
+        totalDOS += DOS
+        
+    return initEnergy,totalDOS
