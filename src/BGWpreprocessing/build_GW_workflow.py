@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(__file__, "..", "..")))
 from pathlib import Path
 
 
+
 # these can be called using QEpreprocessing.write_inputs 
 celldims = np.array([6.29669,6.29669,22.0])
 AtomicPosExample='''Pb        0.0000000000        0.0000000000        0.5000000000
@@ -122,18 +123,22 @@ class buildGWworkflow():
         '''
         # <!> some repition from writeQEinput could be avoided with smarter workflow but for now we re-write.
         
+        if calculation=='scf': wfcolStr = '.true.'
+        else: wfcolStr = '.false.'
+    
+        
         control = f'''&control
     calculation = '{calculation}',
     prefix = '{self.prefix}',
     outdir = './',
     disk_io = 'low',
-    pseudo_dir = './pseudo',
+    pseudo_dir = '../pseudo',
     verbosity = 'low',
-    wf_collect = .false.
+    wf_collect = {wfcolStr}
 /'''
         system = f'''&system
     ibrav = 0,
-    nat = 14,
+    nat = {self.numAtoms},
     ntyp = 3,
     nbnd = {nbnd},
     ecutwfc = 90,
@@ -209,6 +214,7 @@ class buildGWworkflow():
 
         if vxcFile: vxcFileStr = '.true.'
         else: vxcFileStr = '.false.'
+    
             
         input=f'''&input_pw2bgw
   prefix = '{self.prefix}'
@@ -227,9 +233,7 @@ class buildGWworkflow():
   wfng_nvmax = 0
   rhog_flag = {rhoFileStr}
   rhog_file = 'RHO'
-  vxcg_flag = {vxcFileStr}
-  vxcg_file = 'VXC'
-  vxc_flag = .false.
+  vxc_flag = {vxcFileStr}
   vxc_file = 'vxc.dat'
   vxc_diag_nmin = 1
   vxc_diag_nmax = 12
@@ -289,28 +293,6 @@ class buildGWworkflow():
         self.writePW2BGWinput(self.baseNkpoints*6,wfnFilename='WFNq_fi',rhoFile=False,vxcFile=False,outdir=self.outdir+'/07-wfnq_fi',shiftarray=np.array([0.001,0,0]))
         
         
-    
-        
-            
-GWworflow = buildGWworkflow(celldims,AtomicPosExample,outdir='./src/BGWpreprocessing/workflow',baseNkpoints=2)
-#GWworflow.kgridWorkflow(basic=False)
-GWworflow.QEworkflow(70,70,basic=True)
-    
-        
-        
-
-
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-
     
     
     
