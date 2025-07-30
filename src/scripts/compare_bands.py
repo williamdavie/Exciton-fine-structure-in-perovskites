@@ -15,8 +15,7 @@ import numpy as np
 import sys, os
 sys.path.insert(0, os.path.abspath(os.path.join(__file__, "..", "..")))
 from QEpostprocessing.read_QE_output import readQEouput
-from plotting.format import runFormat
-from plotting.plot_band_structure import fetchHighSymLabels,addBandStructure
+from plotting_functions import runFormat,addBandStructure,fetchHighSymLabels,fetchColour
 
 #define and fetch main data
 
@@ -49,36 +48,36 @@ label_indicies, labels = fetchHighSymLabels(kpoints,highsymmetrypoints) #  same 
 
 betastr = r'\beta'
 
+colour = fetchColour('red')
+
 # known index of valance band minimum and conduction maximum, VBM_index = 120,CBM_index = 121
 
 # 1st comparison (0,0 vs 15,0):
 
-fig, ax = plt.subplots()
+
+
+
+fig, ax = plt.subplots(figsize=(6,4.5))
 ax.set(xlabel=r'$\mathbf{k}$',ylabel = r'$E - E_f$ (eV)')
 ax.set_xticks(label_indicies)
 ax.set_xticklabels(labels)
-addBandStructure(ax,kpoints,bandData,fermiLevels[0],startband=119,endband=122,label=f'${betastr} = {beta[0]},\delta = {delta[0]}$',col='#F24405')
-addBandStructure(ax,kpoints2,bandData2,fermiLevels[1],startband=119,endband=122,linestyle=':',label=f'${betastr} = {beta[1]},\delta = {delta[1]}$',col='#F24405')
-ax.legend()
-plt.savefig('beta_vs_undistorted.pdf')
+addBandStructure(ax,kpoints,bandData,fermiLevels[0],startband=119,endband=122,label=f'${betastr} = {beta[0]},\delta = {delta[0]}$',col=colour)
+addBandStructure(ax,kpoints2,bandData2,fermiLevels[1],startband=119,endband=122,linestyle=':',label=f'${betastr} = {beta[1]},\delta = {delta[1]}$',col=colour)
+ax.legend(loc='upper left')
+plt.savefig('BetaVsUndistored.pdf')
+plt.show()
 
 # 2nd comparison ()
 
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(6,4.5))
 ax.set(xlabel=r'$\mathbf{k}$',ylabel = r'$E - E_f$ (eV)')
 ax.set_xticks(label_indicies)
 ax.set_xticklabels(labels)
-addBandStructure(ax,kpoints2,bandData2,fermiLevels[1],startband=119,endband=122,label=f'${betastr} = {beta[1]},\delta = {delta[1]}$',col='#F24405')
-addBandStructure(ax,kpoints3,bandData3,fermiLevels[2],startband=119,endband=122,linestyle=':',label=f'${betastr} = {beta[2]},\delta = {delta[2]}$',col='#F24405')
-ax.legend()
-plt.savefig('double_vs_betaonly.pdf')
-
-
-
-
-
-
-
+addBandStructure(ax,kpoints2,bandData2,fermiLevels[1],startband=119,endband=122,label=f'${betastr} = {beta[1]},\delta = {delta[1]}$',col=colour)
+addBandStructure(ax,kpoints3,bandData3,fermiLevels[2],startband=119,endband=122,linestyle=':',label=f'${betastr} = {beta[2]},\delta = {delta[2]}$',col=colour)
+ax.legend(loc='upper left')
+plt.savefig('DeltaVsBetaOnly.pdf')
+plt.show()
 
 
 
