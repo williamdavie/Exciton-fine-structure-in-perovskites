@@ -12,13 +12,23 @@ William Davie 17/04/25
 
 import numpy as np
 from typing import List
+import sys, os
+sys.path.insert(0, os.path.abspath(os.path.join(__file__, "..", "..")))
 from perovskite_2D import perovskite2D
 
 #------------------------------------------------
 
 class BuildUnitCell(perovskite2D):
     
-    def __init__(self, celldims: np.ndarray, beta: float, delta: float):
+    def __init__(self, celldims: np.ndarray, beta: float, delta: float, outdir: str,
+                 centred: bool=True):
+        '''
+        celldims: (a,b,c)
+        beta: distortion angle 1 
+        delta: distortion angle 2
+        outdir: output directory for files generated 
+        centred: is the monolayer in the centre of the unit cell?
+        '''
         
         super().__init__(B='Pb', Bmass=207.2, X='I', Xmass='126.9') # change accordingly if working with a different structure.
         
@@ -27,13 +37,18 @@ class BuildUnitCell(perovskite2D):
         
         self.celldims = celldims
         
-        self.filename = f'./QEinputs/Cs{self.B}{self.X}_{beta}_{delta}'
+        self.outputfile = outdir + f'/Cs{self.B}{self.X}_{beta}_{delta}'
         
-        self.outdir = '/local/data/public/wd324/QEout/' # Change when needed
+        self.espressoOutdir = '/local/data/public/wd324/QEout/' # Change when needed
         
         self.XAtomList = []
         self.BAtomList = []
         self.CsAtomList = []
+        
+        if centred:
+            self.Z = 0.5
+        else:
+            self.Z = 0.0
         
 
     def locateBXAtoms(self) -> None:
@@ -53,17 +68,17 @@ class BuildUnitCell(perovskite2D):
         
         # Positions of B-site cation are fixed.
         
-        B1pos = np.array([0.0,0.0,0.0])*self.celldims
-        B2pos = np.array([0.5,0.5,0.0])*self.celldims
+        B1pos = np.array([0.0,0.0,self.Z])*self.celldims
+        B2pos = np.array([0.5,0.5,self.Z])*self.celldims
         
         # in plane X atom calculation:
         
         # initial positions:
         
-        X1pos = np.array([0.25,0.25,0.0])*self.celldims
-        X2pos = np.array([0.75,0.75,0.0])*self.celldims
-        X3pos = np.array([0.25,0.75,0.0])*self.celldims
-        X4pos = np.array([0.75,0.25,0.0])*self.celldims
+        X1pos = np.array([0.25,0.25,self.Z])*self.celldims
+        X2pos = np.array([0.75,0.75,self.Z])*self.celldims
+        X3pos = np.array([0.25,0.75,self.Z])*self.celldims
+        X4pos = np.array([0.75,0.25,self.Z])*self.celldims
 
         # B - B bond length 
 
@@ -74,8 +89,8 @@ class BuildUnitCell(perovskite2D):
 
         # based on the constraints of delta and beta on the Pb - I - Pb bond, we arrive at:
         
-        L = np.sqrt( ( (1/4 * B_BLength**2)*(1 + np.tan(self.beta)**2) ) / ( cosTheta**2 * np.tan(self.delta)**2 + 1 )) / 2 
-
+        L = np.sqrt( ( ((1/4 * B_BLength)**2)*(1 + np.tan(self.beta)**2) ) / ( cosTheta**2 * np.tan(self.delta)**2 + 1 ))
+        print(L)
         # using this we can easily compute changes to init positions
 
         dz = cosTheta * L * np.tan(self.delta)
@@ -112,7 +127,10 @@ class BuildUnitCell(perovskite2D):
 
         outUnitVector = 1/np.linalg.norm(outVector) * outVector
         
+        print(L/np.cos(self.delta))
+        
         BondL = np.sqrt( ( (1/4 * B_BLength**2)*(1 + np.tan(self.beta)**2) ) ) / 2
+
 
         X5pos = np.array([outUnitVector[0],-outUnitVector[1],outUnitVector[2]]) * BondL + B1pos
         X6pos = np.array([-outUnitVector[0],outUnitVector[1],-outUnitVector[2]]) * BondL + B1pos
@@ -140,10 +158,10 @@ class BuildUnitCell(perovskite2D):
         X_z = self.XAtomList[4][2] # This is X5 in diagram from previous function
         Csdz = 0.9 * np.array([0,0,X_z])
         
-        Cs1pos = np.array([0.5,0,0]) * self.celldims + Csdz
-        Cs2pos = np.array([0.5,0,0]) * self.celldims - Csdz
-        Cs3pos = np.array([0,0.5,0]) * self.celldims + Csdz
-        Cs4pos = np.array([0,0.5,0]) * self.celldims - Csdz
+        Cs1pos = np.array([0.5,0,self.Z]) * self.celldims + Csdz
+        Cs2pos = np.array([0.5,0,self.Z]) * self.celldims - Csdz
+        Cs3pos = np.array([0,0.5,self.Z]) * self.celldims + Csdz
+        Cs4pos = np.array([0,0.5,self.Z]) * self.celldims - Csdz
         
         self.CsAtomList = [Cs/self.celldims for Cs in [Cs1pos,Cs2pos,Cs3pos,Cs4pos]]
         
@@ -197,7 +215,7 @@ _symmetry_Int_Tables_number       1
 '''
 
     
-        with open(f"{self.filename}_input.cif", "w") as file:
+        with open(f"{self.outputfile}_input.cif", "w") as file:
             
             file.write(data)
             file.write(loopdata)
@@ -210,14 +228,15 @@ _symmetry_Int_Tables_number       1
                 
             for i in range(len(self.CsAtomList)):
                 file.write(f'Cs {self.CsAtomList[i][0]} {self.CsAtomList[i][1]} {self.CsAtomList[i][2]}\n')
-            
+        
+        print(f'CIF file saved to : "{self.outputfile}_input.cif"')
             
     def writeRelaxationInput(self, FullRel: bool, nbnd: float=120) -> None:     
         
         control = f'''&control
     calculation = 'vc-relax',
     prefix = '{self.B}{self.X}_{self.beta*180/np.pi:.1f}_{self.delta*180/np.pi:.1f}',
-    outdir = '{self.outdir}',
+    outdir = '{self.espressoOutdir}',
     pseudo_dir = './pseudo/',
 /
     '''
@@ -276,7 +295,7 @@ _symmetry_Int_Tables_number       1
     '''
         
         
-        with open(f"{self.filename}_relax.in", "w") as file:
+        with open(f"{self.outputfile}_relax.in", "w") as file:
             
             file.write(control)
             file.write('\n')
@@ -306,4 +325,40 @@ _symmetry_Int_Tables_number       1
             file.write(Kpoints)
             
             
-        #------------------------------------------------
+        print(f'Relaxation input saved to : "{self.outputfile}_relax.in"')
+        #------------------------------------------------    
+
+'''
+
+# Standard run (Example)
+#------------------------------------------------
+
+#Input params (Example)
+
+celldims = np.array([  9.515504294  , 8.289755694, 22])
+beta = 20
+delta = 20
+
+FullRel = True
+
+CsAtomStr = ''
+Cs               0.6072076584       -0.0456721997         0.187
+Cs               0.1072076584        0.5456721997        0.187
+Cs               0.3927923416        0.0456721997        -0.187
+Cs              -0.1072076584        0.4543278003        -0.187
+''
+
+
+nbnd = 140
+ 
+ 
+#cell = BuildUnitCell(celldims,beta,delta)
+#cell.locateBXAtoms()
+#cell.readCsPositions(CsAtomStr)
+#cell.writeCIF()
+#cell.writeRelaxationInput(FullRel,nbnd)
+
+#------------------------------------------------
+ 
+'''
+
