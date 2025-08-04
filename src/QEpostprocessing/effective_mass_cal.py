@@ -19,7 +19,6 @@ def effectiveMassTensor2D(kpoints: np.ndarray, Evals: np.ndarray, celldims: np.n
             + the celldims to correctly scale dk
     
     '''
-
     assert kpoints.shape[0] >= 5 and kpoints.shape[1] >= 5, "5 point FD, shape must be >=5"
     
     # check gamma centred
@@ -57,7 +56,14 @@ def effectiveMassTensor2D(kpoints: np.ndarray, Evals: np.ndarray, celldims: np.n
     M[0,1] = d2dxdy
     M[1,0] = d2dydx
     
-    M = 1/(6.582e-16)**2*M*((1e-10)**2)*(1/(1.602e-19)) # units 
+    hbar = 6.582e-16     # eV·s
+    e = 1.602e-19        # J/eV
+    angstrom = 1e-10     # m
+
+    conversion_factor = (hbar**2 * e) / (angstrom**2)  # units: J·s²/m² = kg
+    M = conversion_factor * np.linalg.inv(M)
+    
+    #M = (1/(6.582e-16)**2)*((1e-10)**2)*(1/(1.602e-19))*M # units 
     
     return M
 
@@ -71,11 +77,12 @@ def orderMesh(kpoints: np.ndarray, Evals: np.ndarray):
     Xvals = np.unique(kpoints[:,0])
     Yvals = np.unique(kpoints[:,1])
     Zvals = np.unique(kpoints[:,2]) # = 1 for all our cases (2D semiconductor)
-    
+   
     Nx = len(Xvals)
     Ny = len(Yvals)
     Nz = len(Zvals)
     
+
     kpoints3D = np.zeros((Nx,Ny,Nz,3))
     Evals3D = np.zeros((Nx,Ny,Nz))
     
@@ -88,8 +95,9 @@ def orderMesh(kpoints: np.ndarray, Evals: np.ndarray):
                 kpoints3D[i,j,k] = newKpoint 
 
                 oldIndex = np.where(np.all(kpoints == newKpoint, axis=1))[0]
+                
                 Evals3D[i,j,k] += Evals[oldIndex][0]
-    
+                    
     # reformat for 2D effective mass calculation
     
     if Nz == 1:
@@ -125,13 +133,15 @@ def fivePointMixedDeriv(points: np.ndarray, stepsize1: float, stepsize2: float) 
     return result
 
 
-def fetchDirEffectiveMass(directory: str, 
-                    store: bool=True, printResults: bool=True, outputfilename: str='EffectiveMassLandscape'):
+def fetchDirEffectiveMass(directory: str, band: str,
+                    store: bool=True, storetype: str='ave', printResults: bool=True, outputfilename: str='EffectiveMassLandscape',verbosity: str='low',saveEvals: bool=False):
     '''
     
     Reads a selection of nscf output files and reads the effective mass computes the effective mass 
     relies on specific formating. 
     '''
+    
+    assert band == 'VBM' or band == 'CBM', 'incorrect input for "band", type either "VBM" for the valance band maximum or "CBM" conduction band minimum'
     
     # Similar format to fetchDirBandGap()
     
@@ -140,6 +150,7 @@ def fetchDirEffectiveMass(directory: str,
     angleVals = np.array([0,2.5,5,7.5,10,12.5,15,17.5,20])
     
     for filename in os.listdir(directory):
+        print(filename)
         
         # use class readQEouput to fetch relevant output data
         
@@ -148,24 +159,40 @@ def fetchDirEffectiveMass(directory: str,
         celldims = fileData.getCelldims()
         fileData.fetchBandGap() # needed for LCB and HVB 
         print(fileData.gap)
-        kpoints, Evals = fileData.fetchBandStructure(verbosity='low')
+        kpoints, Evals = fileData.fetchBandStructure(verbosity=verbosity)
         E_HVB, E_LCB = fileData.fetchHVBandLCB()
         
+        bandtouse = E_LCB
+        if band == 'VBM':
+            bandtouse = E_HVB
+        else:
+            bandtouse == E_LCB
+        
         # reformat the data
-        kvals,Evals = orderMesh(kpoints,E_LCB)
-        np.save(f'{filename[0:-4]}_Evals',Evals)
+        kvals,Evals = orderMesh(kpoints,bandtouse)
+        if saveEvals:
+            np.save(f'{filename[0:-4]}_Evals',Evals)
         
         # compute m*
         M = effectiveMassTensor2D(kvals,Evals,celldims)
+
+        M = (M / 9.1093837e-31)
         eigvals, eigvecs = np.linalg.eig(M)
-        eigvals = 1/(eigvals * 9.1093837e-31) # in terms of m0
-        mval = math.sqrt(eigvals[0]**2 + eigvals[1]**2)
-        print(eigvals[0],eigvals[1])
-        
-        
+        #eigvals = eigvals / 9.1093837e-31 # in terms of m0
+        try:
+            mave = math.sqrt(eigvals[0] * eigvals[1])
+        except: # exception for sqrt(0)
+            mave = 0
+            
+        mx = abs(eigvals[0])
+        my = abs(eigvals[1])
+
+
         if printResults == True:
             print(filename)
-            print(mval)
+            print('average M: ', mave)
+            print('Mx: ', mx)
+            print('My: ', my)
             
         if store == True:
             
@@ -178,9 +205,22 @@ def fetchDirEffectiveMass(directory: str,
             betaIndex = np.where(angleVals==beta)
             deltaIndex = np.where(angleVals==delta)
             
-            effectiveMassLandscape[betaIndex,deltaIndex] = mval
-            
+            if storetype == 'x':
+                effectiveMassLandscape[betaIndex,deltaIndex] = mx
+            elif storetype == 'y':
+                effectiveMassLandscape[betaIndex,deltaIndex] = my
+            else:
+                effectiveMassLandscape[betaIndex,deltaIndex] = mave
+                
             
     np.save(outputfilename,effectiveMassLandscape)
+
+
+
+
+def excitonReducedMass(me: np.ndarray, mh: np.ndarray):
+    '''
+    Returns an array exciton reduced masses for an array of electron and hole masses
+    '''
     
-    
+    return (me * mh) / (mh + me)
